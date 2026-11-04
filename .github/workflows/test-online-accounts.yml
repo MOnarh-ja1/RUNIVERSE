@@ -1,0 +1,23 @@
+name: Test RUNIVERSE accounts backend
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'online/server/**'
+      - '.github/workflows/test-online-accounts.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: online/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
