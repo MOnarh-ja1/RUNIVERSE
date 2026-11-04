@@ -1,0 +1,145 @@
+name: Build RUNIVERSE for Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Game version (for example, 3.3.0)"
+        type: string
+        required: true
+        default: "3.3.0"
+      publish_release:
+        description: "Publish the ZIP to GitHub Releases"
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Export Windows x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GODOT_VERSION: "4.7.2"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl --fail --location --retry 3 --retry-delay 3 \
+            "${base}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          echo "/tmp/godot" >> "${GITHUB_PATH}"
+          curl --fail --location --retry 3 --retry-delay 3 \
+            "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          dest="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${dest}"
+          cp -a /tmp/godot-templates/templates/. "${dest}/"
+
+      - name: Import project assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "${godot}" --headless --path . --import
+
+      - name: Build Windows game
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          godot="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "${godot}" --headless --path . --export-release "Windows Desktop" "${GITHUB_WORKSPACE}/dist/RUNIVERSE.exe"
+          test -s dist/RUNIVERSE.exe
+          cd dist
+          files=(RUNIVERSE.exe)
+          if test -s RUNIVERSE.pck; then files+=(RUNIVERSE.pck); fi
+          zip -9 "../RUNIVERSE-Windows.zip" "${files[@]}"
+
+      - name: Determine game version
+        id: build_version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            version="${INPUT_VERSION}"
+          else
+            version="dev-${GITHUB_SHA:0:7}"
+          fi
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ ! "${version}" =~ ^dev-[0-9a-f]{7}$ ]]; then
+            echo "Invalid version: ${version}" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Generate launcher catalog and checksum
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ steps.build_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          sha256sum RUNIVERSE-Windows.zip > RUNIVERSE-Windows.zip.sha256
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          archive = Path("RUNIVERSE-Windows.zip")
+          version = os.environ["BUILD_VERSION"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          manifest = {
+              "games": [{
+                  "id": "runiverse",
+                  "title": "RUNIVERSE",
+                  "description": "3D runner от MgameIO",
+                  "version": version,
+                  "url": f"https://github.com/{repo}/releases/download/v{version}/RUNIVERSE-Windows.zip",
+                  "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                  "entry": "RUNIVERSE.exe"
+              }]
+          }
+          Path("catalog.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Save build for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: RUNIVERSE-${{ steps.build_version.outputs.version }}-Windows
+          path: |
+            RUNIVERSE-Windows.zip
+            RUNIVERSE-Windows.zip.sha256
+            catalog.json
+          retention-days: 30
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_VERSION: ${{ steps.build_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${BUILD_VERSION}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" RUNIVERSE-Windows.zip RUNIVERSE-Windows.zip.sha256 catalog.json --clobber
+          else
+            gh release create "${tag}" RUNIVERSE-Windows.zip RUNIVERSE-Windows.zip.sha256 catalog.json \
+              --target "${GITHUB_SHA}" \
+              --title "RUNIVERSE ${BUILD_VERSION}" \
+              --notes "Windows build of RUNIVERSE. Download RUNIVERSE-Windows.zip and extract before running."
+          fi
