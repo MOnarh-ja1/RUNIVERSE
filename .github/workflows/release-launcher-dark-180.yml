@@ -1,0 +1,78 @@
+name: Build and publish MgameIO Dark Launcher 1.8.0
+on:
+  push:
+    branches: [launcher-131-github]
+    paths:
+      - '.github/workflows/release-launcher-dark-180.yml'
+      - 'launcher_dist/180/source.tar.xz'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mgameio-dark-180-release
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover and verify exact Dark Launcher 1.8.0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'd97a26cf43e067e8488d7ed228edb6f23c51a7a496a3a2f70ed658115f1088ff  launcher_dist/180/source.tar.xz' | sha256sum -c -
+          mkdir -p /tmp/mgameio-180
+          tar -xJf launcher_dist/180/source.tar.xz -C /tmp/mgameio-180
+          test -s /tmp/mgameio-180/ui_windows.go
+          test -s /tmp/mgameio-180/core.go
+          test -s /tmp/mgameio-180/catalog_upcoming_test.go
+          grep -q 'const launcherVersion = "1.8.0"' /tmp/mgameio-180/core.go
+          grep -q 'func drawUpdates(' /tmp/mgameio-180/ui_windows.go
+          grep -q 'func upcomingCard(' /tmp/mgameio-180/ui_windows.go
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Test account, catalog, coming soon and update lifecycle
+        working-directory: /tmp/mgameio-180
+        shell: bash
+        run: |
+          set -euo pipefail
+          go vet ./...
+          go test ./... -v
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/MgameIO_Dark_1_8_0_Windows_Tests.exe
+      - name: Build standalone Windows EXE and package ZIP
+        working-directory: /tmp/mgameio-180
+        shell: bash
+        run: |
+          set -euo pipefail
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -H windowsgui" -o /tmp/MgameIO_Dark_Launcher_1_8_0.exe .
+          file /tmp/MgameIO_Dark_Launcher_1_8_0.exe
+          test -s /tmp/MgameIO_Dark_Launcher_1_8_0.exe
+          sha256sum /tmp/MgameIO_Dark_Launcher_1_8_0.exe | tee /tmp/MgameIO_Dark_Launcher_1_8_0.exe.sha256
+          mkdir -p /tmp/launcher180
+          cp /tmp/MgameIO_Dark_Launcher_1_8_0.exe /tmp/launcher180/
+          cp README_RU.md /tmp/launcher180/README_RU.md
+          cd /tmp/launcher180
+          zip -q /tmp/MgameIO_Dark_Launcher_1_8_0_Windows.zip MgameIO_Dark_Launcher_1_8_0.exe README_RU.md
+          unzip -t /tmp/MgameIO_Dark_Launcher_1_8_0_Windows.zip
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view launcher-dark-v1.8.0 >/dev/null 2>&1; then
+            gh release upload launcher-dark-v1.8.0 /tmp/MgameIO_Dark_Launcher_1_8_0.exe /tmp/MgameIO_Dark_Launcher_1_8_0.exe.sha256 /tmp/MgameIO_Dark_Launcher_1_8_0_Windows.zip --clobber
+          else
+            gh release create launcher-dark-v1.8.0 /tmp/MgameIO_Dark_Launcher_1_8_0.exe /tmp/MgameIO_Dark_Launcher_1_8_0.exe.sha256 /tmp/MgameIO_Dark_Launcher_1_8_0_Windows.zip --target launcher-131-github --title "MgameIO Dark Launcher 1.8.0 — обновления и скоро релиз" --notes "Кнопка обновлений открывает отдельный экран, показывает результаты проверки, версии и кнопку загрузки новой версии игры. В каталоге отдельная карточка «Новая игра MgameIO — скоро релиз», пока без установки. Полноценный профиль (Гость/ник), библиотека и стиль Dark сохранены."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MgameIO-Dark-Launcher-180-Windows
+          retention-days: 30
+          path: |
+            /tmp/MgameIO_Dark_Launcher_1_8_0.exe
+            /tmp/MgameIO_Dark_Launcher_1_8_0.exe.sha256
+            /tmp/MgameIO_Dark_Launcher_1_8_0_Windows.zip
