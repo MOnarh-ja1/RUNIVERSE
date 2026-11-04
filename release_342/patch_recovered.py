@@ -13,7 +13,7 @@ for old,new in changes:
  s=s.replace(old,new)
 # GDRE may normalize numeric literals (0.50 -> 0.5); patch by assignment name.
 for pivot,location in [("arm_pivot","Vector3(0.50 * sign_x, 0.0, 1.62)"),("leg_pivot","Vector3(0.22 * sign_x, 0.0, 0.91)")]:
- pattern=r"("+pivot+r"\\.position\\s*=\\s*)Vector3\\([^\\n]*\\)"
+ pattern=r"("+pivot+r"\.position\s*=\s*)Vector3\([^\n]*\)"
  s,n=re.subn(pattern,lambda m:m.group(1)+location,s)
  if n!=1:raise SystemExit("Unexpected pivot count for "+pivot+": "+str(n))
 p.write_text(s,encoding="utf-8")
