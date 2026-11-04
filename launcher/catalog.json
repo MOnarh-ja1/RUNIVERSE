@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "version": "3.4.4",
-      "description": "Google OAuth: исправлен возврат из браузера и серверный вход. Регистрация по нику и паролю сохранена.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.4/RUNIVERSE_344.exe",
-      "sha256": "d53ff023b6cca7ce35699804e757eb08f018c2877215c1a1154efd307530d7bc"
+      "version": "3.4.5",
+      "description": "Google в разработке; пустая статистика профиля скрыта. Вход по нику/паролю, забеги и магазин сохранены.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.5/RUNIVERSE_345.exe",
+      "sha256": "990f80978d3dbd075a800c7636bd6495163207969027ea3cb46295ff7595f2cc"
     }
   ]
 }
