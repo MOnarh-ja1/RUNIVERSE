@@ -6,6 +6,9 @@ a=root/"scripts/online_api.gd"
 s=a.read_text(encoding="utf8")
 def once(old,new):
  global s
+ if s.count(old)==0 and ":=" in old:
+  alternative=old.replace(":=", ": =")
+  if s.count(alternative)==1:old=alternative
  assert s.count(old)==1, ("online_api anchor",old[:90],s.count(old))
  s=s.replace(old,new,1)
 once("signal online_error(message: String)","signal online_error(message: String)\nsignal config_loaded(google_available: bool)")
