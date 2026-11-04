@@ -1,4 +1,4 @@
 {
-  "api_base": "",
+  "api_base": "https://runiverse-accounts-api.onrender.com",
   "google_client_id": ""
 }
