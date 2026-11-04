@@ -1,0 +1,106 @@
+name: Restore classic RUNIVERSE release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/classic-restore.yml
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-draft:
+    name: Prepare recovery release draft
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create v3.3.1 draft if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "v3.3.1" >/dev/null 2>&1; then
+            echo "The recovery release already exists."
+          else
+            gh release create "v3.3.1" --draft --target main \
+              --title "RUNIVERSE Classic Restore 3.3.1 (original 3.2 FIXED)" \
+              --notes "RESTORE: This is the original, unchanged RUNIVERSE 3.2 FIXED gameplay. Version 3.3.1 is a launcher update marker. Upload the ORIGINAL 3.2 FIXED .exe (not the reconstructed 3.3.0) to this draft and click Publish release. The publisher workflow will verify SHA-256 before enabling the update catalog."
+          fi
+
+  publish-catalog:
+    name: Verify classic EXE and publish launcher catalog
+    if: github.event_name == 'release' && github.event.release.tag_name == 'v3.3.1'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Download published game
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/runiverse-release
+          gh release download v3.3.1 -p '*.exe' --dir /tmp/runiverse-release
+          gh api "repos/${GH_REPO}/releases/tags/v3.3.1" > /tmp/runiverse-release.json
+
+      - name: Validate original game and prepare catalog
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+
+          expected = "780654c2c122b19cf7d74813c4fefd0df5125817394645f89e451e507f5ef46b"
+          folder = Path("/tmp/runiverse-release")
+          assets = json.loads(Path("/tmp/runiverse-release.json").read_text())["assets"]
+          matches = []
+          for exe in folder.glob("*.exe"):
+              with exe.open("rb") as fh:
+                  digest = hashlib.file_digest(fh, "sha256").hexdigest()
+              print(exe.name, digest)
+              if digest == expected:
+                  matches.append(exe.name)
+          if len(matches) != 1:
+              raise SystemExit("Expected ONE original RUNIVERSE 3.2 FIXED .exe, SHA-256: " + expected)
+          matching_assets = [a for a in assets if a["name"] == matches[0]]
+          if len(matching_assets) != 1:
+              raise SystemExit("Game asset missing from published release")
+          game = {
+              "id": "runiverse",
+              "title": "RUNIVERSE",
+              "description": "Восстановлена оригинальная RUNIVERSE 3.2 FIXED: прежний интерфейс и геймплей.",
+              "version": "3.3.1",
+              "url": matching_assets[0]["browser_download_url"],
+              "sha256": expected
+          }
+          output = Path("launcher/catalog.json")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps({"games": [game]}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          print("Game catalog ready:", output)
+          PY
+
+      - name: Commit live update catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add launcher/catalog.json
+          if git diff --cached --quiet; then
+            echo "Catalog already up to date"
+          else
+            git commit -m "Publish RUNIVERSE classic restore 3.3.1 to launcher catalog"
+            git push origin HEAD:main
+          fi
