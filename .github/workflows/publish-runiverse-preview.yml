@@ -1,0 +1,76 @@
+name: Publish RUNIVERSE 3.4 Preview to launcher
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-runiverse-preview.yml'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prepare v3.4.0 draft release for preview EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view v3.4.0 >/dev/null 2>&1; then
+            echo "RUNIVERSE 3.4 draft/release exists"
+          else
+            gh release create v3.4.0 --draft --target main \
+              --title "RUNIVERSE 3.4.0 Preview — 15 cartoon characters" \
+              --notes "Preview based on recovered ORIGINAL RUNIVERSE 3.2 FIXED project, not rewritten 3.3. New 15 animated cartoon characters are used in the shop and actual gameplay, preserving 50 characters and 5 worlds. The online profile and leaderboard UI is included; real Google OAuth and live leaderboard are NOT active until a public HTTPS server and Google Desktop OAuth credentials are configured. Upload the RUNIVERSE.exe from ChatGPT-built 3.4.0 Preview ZIP before publishing. GitHub will verify exact checksum and automatically refresh the MgameIO Launcher online catalog."
+          fi
+
+  verify-and-update:
+    if: github.event_name == 'release' && github.event.release.tag_name == 'v3.4.0'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Validate candidate preview EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release34
+          gh release download v3.4.0 -p RUNIVERSE.exe -D /tmp/release34
+          echo "75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd  /tmp/release34/RUNIVERSE.exe" | sha256sum -c -
+          gh api "repos/${GH_REPO}/releases/tags/v3.4.0" > /tmp/release34/metadata.json
+
+      - name: Publish trusted catalog entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          release=json.loads(Path('/tmp/release34/metadata.json').read_text())
+          assets=[a for a in release.get('assets',[]) if a['name']=='RUNIVERSE.exe']
+          if len(assets)!=1:
+              raise SystemExit('Expected exactly one RUNIVERSE.exe')
+          data={'games':[{
+              'id':'runiverse','title':'RUNIVERSE','version':'3.4.0',
+              'description':'RUNIVERSE 3.4 Preview: 15 мультяшных героев в магазине и забеге; онлайн-функции требуют настройки сервера и Google OAuth.',
+              'url':assets[0]['browser_download_url'],
+              'sha256':'75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd'
+          }]}
+          Path('launcher/catalog.json').write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add launcher/catalog.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Offer verified RUNIVERSE 3.4 Preview update through MgameIO Launcher"
+            git push origin HEAD:main
+          fi
