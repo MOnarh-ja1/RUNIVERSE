@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE (тестовая игра)",
-      "version": "3.4.5",
-      "description": "Google в разработке; пустая статистика профиля скрыта. Вход по нику/паролю, забеги и магазин сохранены.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.5/RUNIVERSE_345.exe",
-      "sha256": "990f80978d3dbd075a800c7636bd6495163207969027ea3cb46295ff7595f2cc"
+      "version": "3.4.6",
+      "description": "Тестовая версия RUNIVERSE. Google в разработке; аккаунт по нику и паролю доступен.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.6/RUNIVERSE_346.exe",
+      "sha256": "d4e20c1e6c5480627e6e8f65f3346b7c38f4bb3aab469ac0174668b0538b1f1c"
     }
   ]
 }
