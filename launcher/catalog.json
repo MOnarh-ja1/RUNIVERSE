@@ -8,5 +8,13 @@
       "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.6/RUNIVERSE_346.exe",
       "sha256": "d4e20c1e6c5480627e6e8f65f3346b7c38f4bb3aab469ac0174668b0538b1f1c"
     }
+  ],
+  "upcoming": [
+    {
+      "id": "next-mgameio",
+      "title": "Новая игра MgameIO",
+      "description": "Новый игровой проект в разработке. Название и дата выхода пока не объявлены.",
+      "status": "Скоро релиз"
+    }
   ]
 }
