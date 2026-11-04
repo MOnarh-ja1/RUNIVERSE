@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "version": "3.4.0",
-      "description": "RUNIVERSE 3.4 Preview: 15 мультяшных героев в магазине и забеге. Google-вход и онлайн-рейтинг пока не подключены к публичному серверу.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.0/RUNIVERSE_34.exe",
-      "sha256": "75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd"
+      "version": "3.4.1",
+      "description": "Исправлены цвета 15 героев, ТОПЫ слева, ПРОФИЛЬ справа сверху. Google-вход ожидает публичный сервер.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.1/RUNIVERSE_341.exe",
+      "sha256": "f5be078a32142375be02504a231c3f022f64e806c15211a9728c7052886d5c3d"
     }
   ]
 }
