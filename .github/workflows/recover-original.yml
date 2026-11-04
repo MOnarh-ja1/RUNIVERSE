@@ -7,7 +7,7 @@ on:
       - '.github/workflows/recover-original.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   recover:
@@ -53,6 +53,24 @@ jobs:
           echo "Recovered project files:"
           find recovered -type f | wc -l
           find recovered -type f | head -40
+
+      - name: Save original recovered sources to separate branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin classic-original-source >/dev/null; then
+            echo "Original source backup branch already exists"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c classic-original-source
+          mkdir -p classic_original
+          cp -a recovered/. classic_original/
+          rm -f classic_original/gdre_export.log
+          git add classic_original
+          git commit -m "Backup recovered original RUNIVERSE Godot project"
+          git push origin HEAD:refs/heads/classic-original-source
 
       - name: Save recovered project (private Actions artifact)
         uses: actions/upload-artifact@v4
