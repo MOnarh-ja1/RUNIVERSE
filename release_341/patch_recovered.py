@@ -54,8 +54,19 @@ sfile=root/'scripts/game.gd'
 s=sfile.read_text(encoding='utf-8')
 def replace_once(before,after):
  global s
- assert s.count(before)==1,('expected exactly once',before[:90],s.count(before))
- s=s.replace(before,after)
+ if s.count(before)==1:
+  s=s.replace(before,after)
+  return
+ if 'ПРОФИЛЬ И МИРОВОЙ ТОП' in before:
+  at=s.find('ПРОФИЛЬ И МИРОВОЙ ТОП')
+  assert at!=-1, 'Recovered online screen title missing'
+  start=s.rfind('\n',0,at)
+  end=s.find('func _refresh_online()',at)
+  assert end>start,(start,end)
+  # Replace the old block from the title label through _open_online.
+  s=s[:start+1]+after+'\n'+s[end:]
+  return
+ raise AssertionError(('expected exactly once',before[:90],s.count(before)))
 replace_once('var online_profile: Label\n','var online_profile: Label\nvar online_title: Label\nvar online_login_button: Button\nvar online_refresh_button: Button\nvar online_mode := "top"\n')
 replace_once('''\t_action_button(m, "НАСТРОЙКИ", Rect2(88, 568, 520, 78), Callable(self, "_open_settings"), false, 27)
 \t_action_button(m, "🌐 ПРОФИЛЬ / ТОП", Rect2(665, 568, 470, 78), Callable(self, "_open_online"), false, 27)
