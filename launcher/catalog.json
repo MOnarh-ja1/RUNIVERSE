@@ -2,7 +2,7 @@
   "games": [
     {
       "id": "runiverse",
-      "title": "RUNIVERSE",
+      "title": "RUNIVERSE (тестовая игра)",
       "version": "3.4.5",
       "description": "Google в разработке; пустая статистика профиля скрыта. Вход по нику/паролю, забеги и магазин сохранены.",
       "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.5/RUNIVERSE_345.exe",
