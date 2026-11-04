@@ -1,0 +1,62 @@
+name: Recover original RUNIVERSE project
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/recover-original.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download verified original game
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/RUNIVERSE.exe \
+            "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.3.1/RUNIVERSE_3_2_FIXED.exe"
+          echo "780654c2c122b19cf7d74813c4fefd0df5125817394645f89e451e507f5ef46b  /tmp/RUNIVERSE.exe" | sha256sum -c -
+
+      - name: Install recovery tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/gore.tar.gz \
+            "https://github.com/figurophobia/gore/releases/download/v0.4.0/linux-x86_64.tar.gz"
+          mkdir -p /tmp/gore-bin
+          tar -xzf /tmp/gore.tar.gz -C /tmp/gore-bin
+          find /tmp/gore-bin -type f -maxdepth 3 -name gore -exec chmod +x {} \;
+          gore="$(find /tmp/gore-bin -type f -name gore | head -n1)"
+          test -n "$gore"
+          echo "GORE_BIN=$gore" >> "$GITHUB_ENV"
+          "$gore" setup
+
+      - name: Recover classic Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovered
+          "$GORE_BIN" info /tmp/RUNIVERSE.exe | tee recovery-info.txt
+          "$GORE_BIN" recover /tmp/RUNIVERSE.exe -o recovered 2>&1 | tee recovery-log.txt
+          test -f recovered/project.godot
+          echo "Recovered project files:"
+          find recovered -type f | wc -l
+          find recovered -type f | head -40
+
+      - name: Save recovered project (private Actions artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RUNIVERSE-original-recovered
+          path: |
+            recovered/
+            recovery-info.txt
+            recovery-log.txt
+          retention-days: 7
