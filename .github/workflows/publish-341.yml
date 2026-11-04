@@ -1,0 +1,139 @@
+name: Publish RUNIVERSE 3.4.1 classic hotfix
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/publish-341.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-runiverse-341
+  cancel-in-progress: false
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download authentic RUNIVERSE 3.4.0 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/RUNIVERSE_34.exe "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.0/RUNIVERSE_34.exe"
+          echo '75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd  /tmp/RUNIVERSE_34.exe' | sha256sum -c -
+
+      - name: Recover the ORIGINAL 3.4 game (not 3.3 rewrite)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/gore.tar.gz "https://github.com/figurophobia/gore/releases/download/v0.4.0/linux-x86_64.tar.gz"
+          mkdir -p /tmp/gore-bin /tmp/extracted
+          tar -xf /tmp/gore.tar.gz -C /tmp/gore-bin
+          chmod +x /tmp/gore-bin/gore
+          /tmp/gore-bin/gore setup
+          /tmp/gore-bin/gore extract /tmp/RUNIVERSE_34.exe -o /tmp/extracted
+          /tmp/gore-bin/gore recover /tmp/extracted -o /tmp/classic
+          test -f /tmp/classic/project.godot
+          test -f /tmp/classic/scripts/game.gd
+          test -f /tmp/classic/scripts/character.gd
+          test -f /tmp/classic/scripts/ci_smoke.gd
+
+      - name: Patch 15 models and relocate top/profile buttons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/classic/release_341
+          cp release_341/patch_recovered.py /tmp/classic/release_341/patch_recovered.py
+          python3 /tmp/classic/release_341/patch_recovered.py
+
+      - name: Install Godot and Windows export template
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/godot.zip "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.7.2-stable_linux.x86_64
+          curl -fL --retry 3 -o /tmp/templates.tpz "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz"
+          unzip -p /tmp/templates.tpz templates/windows_release_x86_64.exe > /tmp/windows_release_x86_64.exe
+          test -s /tmp/windows_release_x86_64.exe
+          cat > /tmp/classic/export_presets.cfg <<'EOF'
+          [preset.0]
+          name="Windows Desktop"
+          platform="Windows Desktop"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter="*.glb,*.json,**/*.glb,**/*.json"
+          exclude_filter=""
+          export_path="RUNIVERSE_341.exe"
+          encrypt_pck=false
+          encrypt_directory=false
+          script_encryption_key=""
+          [preset.0.options]
+          custom_template/debug=""
+          custom_template/release="/tmp/windows_release_x86_64.exe"
+          debug/export_console_script=1
+          binary_format/embed_pck=true
+          texture_format/bptc=true
+          texture_format/s3tc=true
+          binary_format/architecture="x86_64"
+          codesign/enable=false
+          application/modify_resources=false
+          EOF
+
+      - name: Import corrected models and test original game flows
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_SILENCE_ROOT_WARNING=1 /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path /tmp/classic --editor --import --quit > /tmp/import341.log 2>&1 || { tail -100 /tmp/import341.log; exit 1; }
+          GODOT_SILENCE_ROOT_WARNING=1 /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path /tmp/classic --script res://scripts/ci_smoke.gd
+          GODOT_SILENCE_ROOT_WARNING=1 /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path /tmp/classic --script res://scripts/cartoon_smoke.gd
+
+      - name: Export the 3.4.1 Windows EXE
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_SILENCE_ROOT_WARNING=1 /tmp/Godot_v4.7.2-stable_linux.x86_64 --headless --path /tmp/classic --export-release 'Windows Desktop' /tmp/RUNIVERSE_341.exe > /tmp/export341.log 2>&1 || { tail -100 /tmp/export341.log; exit 1; }
+          test -s /tmp/RUNIVERSE_341.exe
+          sha256sum /tmp/RUNIVERSE_341.exe | tee /tmp/RUNIVERSE_341.exe.sha256
+
+      - name: Publish validated 3.4.1 release and online catalog
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view v3.4.1 >/dev/null 2>&1; then
+            gh release upload v3.4.1 /tmp/RUNIVERSE_341.exe /tmp/RUNIVERSE_341.exe.sha256 --clobber
+          else
+            gh release create v3.4.1 /tmp/RUNIVERSE_341.exe /tmp/RUNIVERSE_341.exe.sha256 --target main --title "RUNIVERSE 3.4.1 — персонажи и интерфейс" --notes "Исправлены цвета 15 мультяшных персонажей в реальном забеге; ТОПЫ слева, ПРОФИЛЬ справа сверху, привязка Google в профиле. Онлайн-сервер и Google OAuth всё ещё требуют настройки. Исходный геймплей, магазин, 50 героев, 5 миров и сохранения сохранены."
+          fi
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          p=Path('/tmp/RUNIVERSE_341.exe')
+          sha=hashlib.sha256(p.read_bytes()).hexdigest()
+          catalog={'games':[{'id':'runiverse','title':'RUNIVERSE','version':'3.4.1','description':'Исправлены цвета 15 героев, ТОПЫ слева, ПРОФИЛЬ справа сверху. Google-вход ожидает публичный сервер.','url':'https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.1/RUNIVERSE_341.exe','sha256':sha}]}
+          Path('launcher/catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add launcher/catalog.json
+          git commit -m 'Offer verified RUNIVERSE 3.4.1 game update through installed MgameIO Launcher'
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RUNIVERSE-341-Windows-verified
+          path: |
+            /tmp/RUNIVERSE_341.exe
+            /tmp/RUNIVERSE_341.exe.sha256
+          retention-days: 14
