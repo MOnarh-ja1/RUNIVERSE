@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "version": "3.4.1",
-      "description": "Исправлены цвета 15 героев, ТОПЫ слева, ПРОФИЛЬ справа сверху. Google-вход ожидает публичный сервер.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.1/RUNIVERSE_341.exe",
-      "sha256": "f5be078a32142375be02504a231c3f022f64e806c15211a9728c7052886d5c3d"
+      "version": "3.4.2",
+      "description": "Персонажи стоят вертикально, исправлены беговые анимации и точки крепления конечностей. Google-вход ожидает публичный сервер.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.2/RUNIVERSE_342.exe",
+      "sha256": "1621f7360c6994d49d2b056439758cf3c340a76a532f1812590fa1df0665f363"
     }
   ]
 }
