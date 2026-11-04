@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/publish-341.yml'
+      - 'release_341/patch_recovered.py'
 
 permissions:
   contents: write
