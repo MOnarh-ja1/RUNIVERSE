@@ -44,8 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/release34
-          gh release download v3.4.0 -p RUNIVERSE.exe -D /tmp/release34
-          echo "75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd  /tmp/release34/RUNIVERSE.exe" | sha256sum -c -
+          gh release download v3.4.0 -p 'RUNIVERSE*.exe' -D /tmp/release34
+          echo "75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd  /tmp/release34/RUNIVERSE_34.exe" | sha256sum -c -
           gh api "repos/${GH_REPO}/releases/tags/v3.4.0" > /tmp/release34/metadata.json
 
       - name: Publish trusted catalog entry
@@ -56,9 +56,9 @@ jobs:
           import json
           from pathlib import Path
           release=json.loads(Path('/tmp/release34/metadata.json').read_text())
-          assets=[a for a in release.get('assets',[]) if a['name']=='RUNIVERSE.exe']
+          assets=[a for a in release.get('assets',[]) if a['name']=='RUNIVERSE_34.exe']
           if len(assets)!=1:
-              raise SystemExit('Expected exactly one RUNIVERSE.exe')
+              raise SystemExit('Expected exactly one RUNIVERSE_34.exe')
           data={'games':[{
               'id':'runiverse','title':'RUNIVERSE','version':'3.4.0',
               'description':'RUNIVERSE 3.4 Preview: 15 мультяшных героев в магазине и забеге; онлайн-функции требуют настройки сервера и Google OAuth.',
