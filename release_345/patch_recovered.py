@@ -27,11 +27,23 @@ for i,line in enumerate(lines):
 assert guest_count==2,('guest profile',guest_count)
 assert profile_count==1,('account profile',profile_count)
 s=''.join(lines)
-for old in (
- '"Войди по игровому нику и паролю. Для Google-входа нужен OAuth Client ID"',
- '"Выбери: войти по нику, зарегистрироваться или через Google"',
-):
- once(old,'"Привязка Google — в разработке. Вход по нику и паролю доступен."')
+start=s.index('func _open_profile()')
+end=s.index('func _open_online()',start)
+s=s[:start]+'''func _open_profile() -> void:
+\tonline_mode = "profile"
+\tonline_title.text = "👤 МОЙ ПРОФИЛЬ"
+\tonline_profile.visible = true
+\tonline_rows.visible = false
+\tonline_login_button.visible = true
+\tonline_refresh_button.visible = false
+\t_online_inputs_visible(true)
+\tonline_profile.text = "Гость"
+\t_show("online")
+\tonline_status.text = "Привязка Google — в разработке. Вход по нику и паролю доступен."
+\tif online_api != null and not online_api.session_token.is_empty():
+\t\tonline_api.get_profile()
+
+'''+s[end:]
 start=s.index('func _online_config_loaded(')
 end=s.index('func _login_google()',start)
 s=s[:start]+'''func _online_config_loaded(_google_available: bool) -> void:
