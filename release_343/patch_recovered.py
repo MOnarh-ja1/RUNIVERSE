@@ -12,8 +12,8 @@ def once(old,new):
  assert s.count(old)==1, ("online_api anchor",old[:90],s.count(old))
  s=s.replace(old,new,1)
 once("signal online_error(message: String)","signal online_error(message: String)\nsignal config_loaded(google_available: bool)")
-once("const PORT := 54173",'''const CONFIG_URL := "https://raw.githubusercontent.com/MOnarh-ja1/RUNIVERSE/main/online/public_config.json"
-const PORT := 54173''')
+once("extends Node",'''extends Node
+const CONFIG_URL := "https://raw.githubusercontent.com/MOnarh-ja1/RUNIVERSE/main/online/public_config.json"''')
 once("func start_google_sign_in() -> void:",'''func refresh_runtime_config() -> void:
 \tvar http := HTTPRequest.new()
 \tadd_child(http)
