@@ -49,12 +49,20 @@ jobs:
           mkdir -p "${dest}"
           cp -a /tmp/godot-templates/templates/. "${dest}/"
 
+      - name: Validate game script
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "${godot}" --headless --path . --check-only --script res://scripts/runiverse_v33.gd
+
       - name: Import project assets
         shell: bash
         run: |
           set -euo pipefail
           godot="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          "${godot}" --headless --path . --import
+          "${godot}" --headless --path . --import 2>&1 | tee /tmp/runiverse-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed to load script' /tmp/runiverse-import.log; then exit 1; fi
 
       - name: Build Windows game
         shell: bash
