@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Checkout launcher source branch
         uses: actions/checkout@v4
-      - name: Restore verified MgameIO 1.3.2 sources
+      - name: Restore verified MgameIO 1.3.1 baseline sources
         run: |
           set -euo pipefail
           cat launcher_dist/131/src.part{00..15} | base64 --decode > /tmp/launcher-131.tar.xz
@@ -51,19 +51,19 @@ jobs:
         run: |
           set -euo pipefail
           go test ./...
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/MgameIO_Launcher_1_3_1_tests.exe
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/MgameIO_Launcher_1_3_2_tests.exe
       - name: Build Windows standalone executable
         working-directory: /tmp/mgameio-launcher
         run: |
           set -euo pipefail
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -H windowsgui" -o /tmp/MgameIO_Launcher_1_3_1.exe .
-          test -s /tmp/MgameIO_Launcher_1_3_1.exe
-          file /tmp/MgameIO_Launcher_1_3_1.exe
-          sha256sum /tmp/MgameIO_Launcher_1_3_1.exe | tee /tmp/MgameIO_Launcher_1_3_1.exe.sha256
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -H windowsgui" -o /tmp/MgameIO_Launcher_1_3_2.exe .
+          test -s /tmp/MgameIO_Launcher_1_3_2.exe
+          file /tmp/MgameIO_Launcher_1_3_2.exe
+          sha256sum /tmp/MgameIO_Launcher_1_3_2.exe | tee /tmp/MgameIO_Launcher_1_3_2.exe.sha256
           mkdir -p /tmp/dist
-          cp /tmp/MgameIO_Launcher_1_3_1.exe /tmp/dist/
+          cp /tmp/MgameIO_Launcher_1_3_2.exe /tmp/dist/
           echo "MgameIO Launcher 1.3.2 for Windows 10/11" > /tmp/dist/README.txt
-          cd /tmp/dist && zip -q /tmp/MgameIO_Launcher_1_3_1_Windows.zip MgameIO_Launcher_1_3_1.exe README.txt
+          cd /tmp/dist && zip -q /tmp/MgameIO_Launcher_1_3_2_Windows.zip MgameIO_Launcher_1_3_2.exe README.txt
       - name: Publish directly downloadable GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,16 +71,16 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view launcher-v1.3.2 >/dev/null 2>&1; then
-            gh release upload launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_1.exe /tmp/MgameIO_Launcher_1_3_1.exe.sha256 /tmp/MgameIO_Launcher_1_3_1_Windows.zip --clobber
+            gh release upload launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_2.exe /tmp/MgameIO_Launcher_1_3_2.exe.sha256 /tmp/MgameIO_Launcher_1_3_2_Windows.zip --clobber
           else
-            gh release create launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_1.exe /tmp/MgameIO_Launcher_1_3_1.exe.sha256 /tmp/MgameIO_Launcher_1_3_1_Windows.zip --target launcher-131-github --title "MgameIO Launcher 1.3.2 — Google в разработке" --notes "Standalone Windows 10/11 launcher. Google-привязка в разработке и не запускается. Скрыты пустые показатели профиля. Вход по нику/паролю, каталог RUNIVERSE и локальные сохранения сохранены."
+            gh release create launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_2.exe /tmp/MgameIO_Launcher_1_3_2.exe.sha256 /tmp/MgameIO_Launcher_1_3_2_Windows.zip --target launcher-131-github --title "MgameIO Launcher 1.3.2 — Google в разработке" --notes "Standalone Windows 10/11 launcher. Google-привязка в разработке и не запускается. Скрыты пустые показатели профиля. Вход по нику/паролю, каталог RUNIVERSE и локальные сохранения сохранены."
           fi
       - name: Upload backup workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MgameIO-Launcher-131-Windows
+          name: MgameIO-Launcher-132-Windows
           path: |
-            /tmp/MgameIO_Launcher_1_3_1.exe
-            /tmp/MgameIO_Launcher_1_3_1.exe.sha256
-            /tmp/MgameIO_Launcher_1_3_1_Windows.zip
+            /tmp/MgameIO_Launcher_1_3_2.exe
+            /tmp/MgameIO_Launcher_1_3_2.exe.sha256
+            /tmp/MgameIO_Launcher_1_3_2_Windows.zip
           retention-days: 30
