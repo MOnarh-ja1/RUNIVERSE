@@ -66,6 +66,8 @@ a=root/"scripts/game.gd"
 s=a.read_text(encoding="utf8").replace(" -> void :", " -> void:").replace(": =", ":=")
 def replace(old,new):
  global s
+ if s.count(old)!=1:
+  print("RECOVERED_GAME_MATCH_DEBUG",old[:100],repr([line for line in s.splitlines() if any(k in line for k in ("online_mode","online_api","_build_online_screen","online_profile","_open_top"))][:65]))
  assert s.count(old)==1,("game anchor",old[:90],s.count(old))
  s=s.replace(old,new,1)
 replace('var online_mode := "top"','''var online_mode := "top"
