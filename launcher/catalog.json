@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "version": "3.4.3",
-      "description": "Онлайн-аккаунты: вход и регистрация по нику и паролю в игре. Google-вход откроется через браузер после выдачи Client ID.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.3/RUNIVERSE_343.exe",
-      "sha256": "ed122711f749b86f3580347e2d62add492f509a680bb31a1c982cc2c96a95681"
+      "version": "3.4.4",
+      "description": "Google OAuth: исправлен возврат из браузера и серверный вход. Регистрация по нику и паролю сохранена.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.4/RUNIVERSE_344.exe",
+      "sha256": "d53ff023b6cca7ce35699804e757eb08f018c2877215c1a1154efd307530d7bc"
     }
   ]
 }
