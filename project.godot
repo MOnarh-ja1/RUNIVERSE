@@ -1,0 +1,17 @@
+config_version=5
+
+[application]
+config/name="RUNIVERSE"
+run/main_scene="res://boot.tscn"
+config/description="RUNIVERSE 3.3 — first 15 fully playable cartoon 3D heroes by MgameIO"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
