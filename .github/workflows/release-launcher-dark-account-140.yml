@@ -1,0 +1,90 @@
+name: Build and publish MgameIO Dark Account 1.4.0
+on:
+  push:
+    branches:
+      - launcher-131-github
+    paths:
+      - '.github/workflows/release-launcher-dark-account-140.yml'
+      - 'launcher_dist/132/patch_launcher.py'
+      - 'launcher_dist/140/patch_dark_account.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows-launcher:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout launcher source branch
+        uses: actions/checkout@v4
+      - name: Restore verified MgameIO 1.3.1 baseline sources
+        run: |
+          set -euo pipefail
+          cat launcher_dist/131/src.part{00..15} | base64 --decode > /tmp/launcher-131.tar.xz
+          echo '726af21b45ce4b8a92acc1b295e7a69d0a26b74b991a7c68f1b3e7166be9933f  /tmp/launcher-131.tar.xz' | sha256sum --check
+          mkdir -p /tmp/mgameio-launcher
+          tar -xJf /tmp/launcher-131.tar.xz -C /tmp/mgameio-launcher
+          test -s /tmp/mgameio-launcher/account_windows.go
+          test -s /tmp/mgameio-launcher/ui_windows.go
+          test -s /tmp/mgameio-launcher/gen_assets.py
+      - name: Restore old working account profile and apply Dark Launcher settings
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/launcher_dist/132/patch_launcher.py"
+          python3 "$GITHUB_WORKSPACE/launcher_dist/140/patch_dark_account.py"
+          grep -q 'Привязка Google — В РАЗРАБОТКЕ' account_windows.go
+          ! grep -q '"google-login", "", false' account_windows.go
+          grep -q 'DarkLauncher' core.go
+          grep -q 'RUNIVERSE (тестовая игра)' core.go
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Generate original launcher artwork
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user --break-system-packages 'Pillow>=10,<12'
+          python3 /tmp/mgameio-launcher/gen_assets.py
+          test -s /tmp/mgameio-launcher/assets/hero.png
+          test -s /tmp/mgameio-launcher/assets/empty.png
+          test -s /tmp/mgameio-launcher/assets/launcher.ico
+      - name: Test launcher core
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          go test ./...
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/MgameIO_Dark_Account_1_4_0_tests.exe
+      - name: Build Windows standalone executable
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -H windowsgui" -o /tmp/MgameIO_Dark_Account_1_4_0.exe .
+          test -s /tmp/MgameIO_Dark_Account_1_4_0.exe
+          file /tmp/MgameIO_Dark_Account_1_4_0.exe
+          sha256sum /tmp/MgameIO_Dark_Account_1_4_0.exe | tee /tmp/MgameIO_Dark_Account_1_4_0.exe.sha256
+          mkdir -p /tmp/dist
+          cp /tmp/MgameIO_Dark_Account_1_4_0.exe /tmp/dist/
+          cp README_RU.md /tmp/dist/README_RU.md
+          cd /tmp/dist && zip -q /tmp/MgameIO_Dark_Account_1_4_0_Windows.zip MgameIO_Dark_Account_1_4_0.exe README_RU.md
+      - name: Publish directly downloadable GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view launcher-dark-account-v1.4.0 >/dev/null 2>&1; then
+            gh release upload launcher-dark-account-v1.4.0 /tmp/MgameIO_Dark_Account_1_4_0.exe /tmp/MgameIO_Dark_Account_1_4_0.exe.sha256 /tmp/MgameIO_Dark_Account_1_4_0_Windows.zip --clobber
+          else
+            gh release create launcher-dark-account-v1.4.0 /tmp/MgameIO_Dark_Account_1_4_0.exe /tmp/MgameIO_Dark_Account_1_4_0.exe.sha256 /tmp/MgameIO_Dark_Account_1_4_0_Windows.zip --target launcher-131-github --title "MgameIO Dark Account 1.4.0 — профиль как в старом лаунчере" --notes "Профиль как в старом MgameIO: вход и регистрация по нику и паролю через работающий сервер, смена ника и пароля, выход. Тёмный интерфейс, каталог RUNIVERSE (тестовая игра) 3.4.6, Библиотека. Google — в разработке. Сборка на основе исходников классического лаунчера: исходник присланного Dark 1.3 EXE недоступен."
+          fi
+      - name: Upload backup workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MgameIO-Dark-Account-140-Windows
+          path: |
+            /tmp/MgameIO_Dark_Account_1_4_0.exe
+            /tmp/MgameIO_Dark_Account_1_4_0.exe.sha256
+            /tmp/MgameIO_Dark_Account_1_4_0_Windows.zip
+          retention-days: 30
