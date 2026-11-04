@@ -1,0 +1,30 @@
+name: Check RUNIVERSE Google OAuth exchange response
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/check-google-oauth-exchange.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify HTTPS endpoint answers without any real Google account
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl --retry 2 -fsSL -o /tmp/health.json -w '%{http_code}' -m 40 https://runiverse-accounts-api.onrender.com/health)
+          echo "health=$code"
+          cat /tmp/health.json
+          echo
+          test "$code" = 200
+          python3 -c 'import json; x=json.load(open("/tmp/health.json")); assert x.get("ok") is True'
+          status=$(curl -sSL -m 60 -o /tmp/oauth.json -w '%{http_code}'             -H 'Content-Type: application/json'             --data '{"code":"invalid-test-authorization-code","code_verifier":"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890","redirect_uri":"http://127.0.0.1:54173/callback"}'             https://runiverse-accounts-api.onrender.com/api/auth/google/code)
+          echo "google_code_exchange_status=$status"
+          cat /tmp/oauth.json
+          echo
+          test "$status" != 404
+          test "$status" != 503
+          python3 -c 'import json; x=json.load(open("/tmp/oauth.json")); assert str(x.get("error","")).startswith("google_code_exchange_failed_")'
