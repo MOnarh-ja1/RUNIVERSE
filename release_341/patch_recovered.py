@@ -15,11 +15,36 @@ for p in models:
  while offset<len(b):
   cn,ct=struct.unpack_from('<I4s',b,offset)
   chunks.append((ct,b[offset+8:offset+8+cn]));offset+=8+cn
- j['materials']=[{'name':'VertexPaint_3_4_1','pbrMetallicRoughness':{'baseColorFactor':[1,1,1,1],'metallicFactor':0,'roughnessFactor':0.72},'doubleSided':True}]
- for mesh in j['meshes']:
+ hero_index=int(p.name[:2])
+ palettes=[
+  ('#ef7f26','#e6b18b','#543b34'),('#393043','#d0b3aa','#1d1526'),('#e88bbf','#f4cbaa','#d54ca2'),
+  ('#315f9e','#eac5a1','#192944'),('#e9e6db','#f4eedb','#1d2631'),('#80b9d0','#a8d0df','#2b536c'),
+  ('#a83d55','#e8bca0','#3d2639'),('#444b65','#e2b99f','#171b2b'),('#dcd9d0','#d7dee4','#4b84a9'),
+  ('#5cb564','#9ddc7b','#2f6540'),('#e6e3d6','#f0e9d4','#494655'),('#e97c24','#ffbb65','#903321'),
+  ('#7ad5ef','#d9f3ff','#3e7ca6'),('#52b888','#e3c7a8','#2f6257'),('#e1af58','#f4d7bb','#66513c')
+ ]
+ primary,skin,dark=palettes[hero_index]
+ def rgba(hex_value):
+  return [int(hex_value[i:i+2],16)/255.0 for i in (1,3,5)]+[1.0]
+ def part_color(name):
+  a=name.lower()
+  if any(v in a for v in ('eye_white','glint','highlight')):return '#ffffff'
+  if any(v in a for v in ('pupil','iris','eyebrow','hair','shoe','boot','mask','belt','goggle','visor')):return dark
+  if any(v in a for v in ('skin','head','face','hand','nose','ear','wrist')):return skin
+  if any(v in a for v in ('tip','buckle','badge','collar','emblem')):return '#f5cf6b'
+  if 'eye' in a:return '#202c41'
+  return primary
+ mats=[]
+ mesh_names={x['mesh']:x.get('name','') for x in j.get('nodes',[]) if 'mesh' in x}
+ for index,mesh in enumerate(j['meshes']):
+  part=mesh_names.get(index,mesh.get('name','body'))
   for primitive in mesh['primitives']:
-   assert 'COLOR_0' in primitive['attributes'],p
-   primitive['material']=0
+   has_vertex_color='COLOR_0' in primitive['attributes']
+   color=[1,1,1,1] if has_vertex_color else rgba(part_color(part))
+   mat={'name':'Fixed_'+part,'pbrMetallicRoughness':{'baseColorFactor':color,'metallicFactor':0,'roughnessFactor':0.7},'doubleSided':True}
+   primitive['material']=len(mats)
+   mats.append(mat)
+ j['materials']=mats
  raw=json.dumps(j,ensure_ascii=False,separators=(',',':')).encode()
  raw+=b' '*((-len(raw))%4)
  out=bytearray(b'glTF'+struct.pack('<II',2,0)+struct.pack('<I4s',len(raw),b'JSON')+raw)
