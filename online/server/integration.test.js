@@ -18,7 +18,7 @@ test('register login profile change credentials and sign in again',async(t)=>{
  const port=20500+Math.floor(Math.random()*10000);
  const server=spawn(process.execPath,['index.js'],{
   cwd:import.meta.dirname,
-  env:{...process.env,PORT:String(port),GOOGLE_CLIENT_ID:'',TRUST_PROXY:'0',DB_PATH:join(directory,'test.db')},stdio:['ignore','pipe','pipe']
+  env:{...process.env,NODE_ENV:'test',PORT:String(port),GOOGLE_CLIENT_ID:'',TRUST_PROXY:'0',DB_PATH:join(directory,'test.db')},stdio:['ignore','pipe','pipe']
  });
  let errors='';server.stderr.on('data',chunk=>{errors+=chunk.toString()});
  t.after(async()=>{server.kill();rmSync(directory,{recursive:true,force:true})});
