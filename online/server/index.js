@@ -13,7 +13,7 @@ const google=clientId?new OAuth2Client(clientId):null;
 const db=new Database(process.env.DB_PATH||'./runiverse.sqlite');
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
-db.exec(\`
+db.exec(`
  CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nickname TEXT NOT NULL, nickname_key TEXT NOT NULL UNIQUE,
@@ -30,7 +30,7 @@ db.exec(\`
   duration_ms INTEGER NOT NULL, created_at INTEGER NOT NULL
  );
  CREATE INDEX IF NOT EXISTS idx_account_scores_user ON account_scores(account_id, distance DESC);
-\`);
+`);
 const app=express();app.disable('x-powered-by');
 if(process.env.TRUST_PROXY==='1')app.set('trust proxy',1);
 app.use(helmet());app.use(express.json({limit:'8kb'}));
