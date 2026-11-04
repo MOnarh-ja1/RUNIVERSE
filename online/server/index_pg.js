@@ -74,9 +74,7 @@ app.post('/api/login',authLimit,async(req,res,next)=>{try{
  if(!a||!valid)return fail(res,'invalid_credentials',401);
  res.json(await session(a));
 }catch(e){next(e)}});
-app.post('/api/auth/google',authLimit,async(req,res,next)=>{try{
- if(!google)return fail(res,'google_not_configured',503);
- const idToken=req.body?.id_token;
+async function applyGoogleToken(req,res,idToken){
  if(typeof idToken!=='string'||idToken.length>8192)return fail(res,'invalid_id_token');
  const ticket=await google.verifyIdToken({idToken,audience:googleClientId});
  const p=ticket.getPayload();
@@ -93,8 +91,48 @@ app.post('/api/auth/google',authLimit,async(req,res,next)=>{try{
   const nick='Игрок_'+digest(p.sub).slice(0,12);
   a=(await sql('INSERT INTO accounts(nickname,nickname_key,google_sub,picture,created_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(google_sub) DO UPDATE SET picture=EXCLUDED.picture RETURNING *',[nick,nick.toLowerCase(),p.sub,picture,now()])).rows[0];
  }
- res.json(await session(a));
-}catch(e){if(e.code==='23505')return fail(res,'nickname_taken',409);if(e.message?.includes('jwt')||e.message?.includes('Token used'))return fail(res,'google_auth_failed',401);next(e)}});
+ return res.json(await session(a));
+}
+function googleError(err,res,next){
+ if(err.code==='23505')return fail(res,'nickname_taken',409);
+ if(err.message?.includes('jwt')||err.message?.includes('Token used')||err.message?.includes('Wrong recipient')||err.message?.includes('Invalid token'))return fail(res,'google_auth_failed',401);
+ next(err);
+}
+app.post('/api/auth/google',authLimit,async(req,res,next)=>{try{
+ if(!google)return fail(res,'google_not_configured',503);
+ return await applyGoogleToken(req,res,req.body?.id_token);
+}catch(e){googleError(e,res,next)}});
+// Native desktop OAuth: browser -> loopback listener -> HTTPS API -> Google token endpoint.
+// The app sends only the one-use authorization code and PKCE verifier; never a Google password.
+// GOOGLE_CLIENT_SECRET (when required for Desktop clients) is kept ONLY in Render environment.
+app.post('/api/auth/google/code',authLimit,async(req,res,next)=>{try{
+ if(!google)return fail(res,'google_not_configured',503);
+ const code=req.body?.code, verifier=req.body?.code_verifier, redirect=req.body?.redirect_uri;
+ if(typeof code!=='string'||code.length<10||code.length>4096 ||
+    typeof verifier!=='string'||!(/^[A-Za-z0-9_.~-]{43,128}$/).test(verifier) ||
+    typeof redirect!=='string'||!(/^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/callback$/).test(redirect) ||
+    Number(new URL(redirect).port)<1)return fail(res,'invalid_google_oauth_request');
+ const form=new URLSearchParams({
+  code,code_verifier:verifier,redirect_uri:redirect,
+  grant_type:'authorization_code',client_id:googleClientId
+ });
+ if(process.env.GOOGLE_CLIENT_SECRET)form.set('client_secret',process.env.GOOGLE_CLIENT_SECRET);
+ const response=await fetch('https://oauth2.googleapis.com/token',{
+  method:'POST',
+  headers:{'Content-Type':'application/x-www-form-urlencoded'},
+  body:form,
+  signal:AbortSignal.timeout(25000)
+ });
+ const data=await response.json();
+ if(!response.ok || typeof data?.id_token!=='string'){
+  const googleCode=typeof data?.error==='string' ? data.error : 'unknown';
+  console.warn('Google token exchange failed:',googleCode);
+  if(googleCode==='invalid_request'&&!process.env.GOOGLE_CLIENT_SECRET)
+   return fail(res,'google_client_secret_required',503);
+  return fail(res,'google_code_exchange_failed_'+googleCode,401);
+ }
+ return await applyGoogleToken(req,res,data.id_token);
+}catch(e){googleError(e,res,next)}});
 app.get('/api/profile',auth,async(req,res,next)=>{try{
  const r=(await sql('SELECT COALESCE(MAX(distance),0)::integer AS best,COUNT(*)::integer AS runs FROM account_scores WHERE account_id=$1',[req.account.id])).rows[0];
  res.json({player:pub(req.account),best_distance:r.best,runs:r.runs,google_linked:!!req.account.google_sub,has_password:!!req.account.password_hash});
