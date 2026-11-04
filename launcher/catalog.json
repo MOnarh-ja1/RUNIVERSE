@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "description": "Классическая RUNIVERSE 3.2 FIXED — восстановлены оригинальные меню, магазин и геймплей.",
-      "version": "3.3.1",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.3.1/RUNIVERSE_3_2_FIXED.exe",
-      "sha256": "780654c2c122b19cf7d74813c4fefd0df5125817394645f89e451e507f5ef46b"
+      "version": "3.4.0",
+      "description": "RUNIVERSE 3.4 Preview: 15 мультяшных героев в магазине и забеге. Google-вход и онлайн-рейтинг пока не подключены к публичному серверу.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.0/RUNIVERSE_34.exe",
+      "sha256": "75a4ed5397f46044e70d3485732ec0e9954ec878695cf53fc228d241ef3e0afd"
     }
   ]
 }
