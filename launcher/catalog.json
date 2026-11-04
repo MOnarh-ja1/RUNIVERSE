@@ -3,10 +3,10 @@
     {
       "id": "runiverse",
       "title": "RUNIVERSE",
-      "version": "3.4.2",
-      "description": "Персонажи стоят вертикально, исправлены беговые анимации и точки крепления конечностей. Google-вход ожидает публичный сервер.",
-      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.2/RUNIVERSE_342.exe",
-      "sha256": "1621f7360c6994d49d2b056439758cf3c340a76a532f1812590fa1df0665f363"
+      "version": "3.4.3",
+      "description": "Онлайн-аккаунты: вход и регистрация по нику и паролю в игре. Google-вход откроется через браузер после выдачи Client ID.",
+      "url": "https://github.com/MOnarh-ja1/RUNIVERSE/releases/download/v3.4.3/RUNIVERSE_343.exe",
+      "sha256": "ed122711f749b86f3580347e2d62add492f509a680bb31a1c982cc2c96a95681"
     }
   ]
 }
