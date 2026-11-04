@@ -321,7 +321,7 @@ func _create_limb_animation_rig(model: Node3D) -> void:
             model.add_child(pivot)
             pivots["%s_%d" % [kind, side]] = pivot
     for mesh_node in _walk_meshes(model):
-        var label := mesh_node.name.to_lower()
+        var label: String = str(mesh_node.name).to_lower()
         var kind := ""
         if ("upper-arm" in label or "forearm" in label or "elbow" in label or "hand_" in label or "pauldron" in label):
             kind = "arm"
@@ -894,7 +894,7 @@ func _input(event: InputEvent) -> void:
         lane = mini(1,lane+1)
     elif key == KEY_UP or key == KEY_W or key == KEY_SPACE:
         if jump_clock <= 0 and slide_clock <= 0:
-            var perk := characters[selected]
+            var perk: Dictionary = characters[selected]
             var boost := float(perk.get("bonus_value",0.0)) if str(perk.get("bonus_key","")) == "jump_mul" else 0.0
             jump_clock = 0.75 * (1.0 + boost*0.4)
     elif key == KEY_DOWN or key == KEY_S:
