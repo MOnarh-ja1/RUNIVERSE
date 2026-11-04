@@ -45,7 +45,10 @@ jobs:
           set -euo pipefail
           mkdir -p recovered
           "$GORE_BIN" info /tmp/RUNIVERSE.exe | tee recovery-info.txt
-          "$GORE_BIN" recover /tmp/RUNIVERSE.exe -o recovered 2>&1 | tee recovery-log.txt
+          mkdir -p extracted
+          "$GORE_BIN" extract /tmp/RUNIVERSE.exe -o extracted 2>&1 | tee extraction-log.txt
+          test -n "$(find extracted -type f -print -quit)"
+          "$GORE_BIN" recover extracted -o recovered 2>&1 | tee recovery-log.txt
           test -f recovered/project.godot
           echo "Recovered project files:"
           find recovered -type f | wc -l
@@ -58,5 +61,6 @@ jobs:
           path: |
             recovered/
             recovery-info.txt
+            extraction-log.txt
             recovery-log.txt
           retention-days: 7
