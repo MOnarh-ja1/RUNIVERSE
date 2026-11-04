@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 root=Path(__file__).resolve().parents[1]
 a=root/"scripts/online_api.gd"
-s=a.read_text(encoding="utf8").replace(" -> void :", " -> void:").replace(": =", ":=")
+s=a.read_text(encoding="utf8").replace(" -> void :", " -> void:").replace(": =", ":=").replace("online_mode:=", "online_mode :=")
 def once(old,new):
  global s
  if s.count(old)==0 and ":=" in old:
@@ -63,7 +63,7 @@ once('online_error.emit("Настройте Google OAuth и HTTPS сервер")
 a.write_text(s,encoding="utf8")
 
 a=root/"scripts/game.gd"
-s=a.read_text(encoding="utf8").replace(" -> void :", " -> void:").replace(": =", ":=")
+s=a.read_text(encoding="utf8").replace(" -> void :", " -> void:").replace(": =", ":=").replace("online_mode:=", "online_mode :=")
 def replace(old,new):
  global s
  if s.count(old)!=1:
