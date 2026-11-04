@@ -1,0 +1,86 @@
+name: Build and publish MgameIO Launcher 1.3.2
+on:
+  push:
+    branches:
+      - launcher-131-github
+    paths:
+      - '.github/workflows/release-launcher-132.yml'
+      - 'launcher_dist/132/patch_launcher.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows-launcher:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout launcher source branch
+        uses: actions/checkout@v4
+      - name: Restore verified MgameIO 1.3.2 sources
+        run: |
+          set -euo pipefail
+          cat launcher_dist/131/src.part{00..15} | base64 --decode > /tmp/launcher-131.tar.xz
+          echo '726af21b45ce4b8a92acc1b295e7a69d0a26b74b991a7c68f1b3e7166be9933f  /tmp/launcher-131.tar.xz' | sha256sum --check
+          mkdir -p /tmp/mgameio-launcher
+          tar -xJf /tmp/launcher-131.tar.xz -C /tmp/mgameio-launcher
+          test -s /tmp/mgameio-launcher/account_windows.go
+          test -s /tmp/mgameio-launcher/ui_windows.go
+          test -s /tmp/mgameio-launcher/gen_assets.py
+      - name: Disable unfinished Google sign-in and remove empty profile scores
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/launcher_dist/132/patch_launcher.py"
+          grep -q 'Привязка Google — В РАЗРАБОТКЕ' account_windows.go
+          ! grep -q '"google-login", "", false' account_windows.go
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Generate original launcher artwork
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user --break-system-packages 'Pillow>=10,<12'
+          python3 /tmp/mgameio-launcher/gen_assets.py
+          test -s /tmp/mgameio-launcher/assets/hero.png
+          test -s /tmp/mgameio-launcher/assets/empty.png
+          test -s /tmp/mgameio-launcher/assets/launcher.ico
+      - name: Test launcher core
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          go test ./...
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/MgameIO_Launcher_1_3_1_tests.exe
+      - name: Build Windows standalone executable
+        working-directory: /tmp/mgameio-launcher
+        run: |
+          set -euo pipefail
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -H windowsgui" -o /tmp/MgameIO_Launcher_1_3_1.exe .
+          test -s /tmp/MgameIO_Launcher_1_3_1.exe
+          file /tmp/MgameIO_Launcher_1_3_1.exe
+          sha256sum /tmp/MgameIO_Launcher_1_3_1.exe | tee /tmp/MgameIO_Launcher_1_3_1.exe.sha256
+          mkdir -p /tmp/dist
+          cp /tmp/MgameIO_Launcher_1_3_1.exe /tmp/dist/
+          echo "MgameIO Launcher 1.3.2 for Windows 10/11" > /tmp/dist/README.txt
+          cd /tmp/dist && zip -q /tmp/MgameIO_Launcher_1_3_1_Windows.zip MgameIO_Launcher_1_3_1.exe README.txt
+      - name: Publish directly downloadable GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view launcher-v1.3.2 >/dev/null 2>&1; then
+            gh release upload launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_1.exe /tmp/MgameIO_Launcher_1_3_1.exe.sha256 /tmp/MgameIO_Launcher_1_3_1_Windows.zip --clobber
+          else
+            gh release create launcher-v1.3.2 /tmp/MgameIO_Launcher_1_3_1.exe /tmp/MgameIO_Launcher_1_3_1.exe.sha256 /tmp/MgameIO_Launcher_1_3_1_Windows.zip --target launcher-131-github --title "MgameIO Launcher 1.3.2 — Google в разработке" --notes "Standalone Windows 10/11 launcher. Google-привязка в разработке и не запускается. Скрыты пустые показатели профиля. Вход по нику/паролю, каталог RUNIVERSE и локальные сохранения сохранены."
+          fi
+      - name: Upload backup workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MgameIO-Launcher-131-Windows
+          path: |
+            /tmp/MgameIO_Launcher_1_3_1.exe
+            /tmp/MgameIO_Launcher_1_3_1.exe.sha256
+            /tmp/MgameIO_Launcher_1_3_1_Windows.zip
+          retention-days: 30
