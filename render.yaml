@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: runiverse-online
+    runtime: node
+    plan: starter
+    rootDir: online/server
+    buildCommand: npm install --omit=dev
+    startCommand: node index.js
+    healthCheckPath: /health
+    disk:
+      name: runiverse-db
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/runiverse.sqlite
+      - key: TRUST_PROXY
+        value: "1"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
