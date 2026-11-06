@@ -17,6 +17,16 @@
       "release_date": "2026-11-04",
       "availability": "local",
       "sha256": "c1f2badc9d71a0166ab4ad1d7b49fd5590d69bdbe81f81468aabaccfc759f4bd"
+    },
+    {
+      "id": "washworks",
+      "title": "WashWorks",
+      "version": "3.0",
+      "description": "Симулятор автомойки MgameIO. Версия 3.0 доступна в комплекте для локальной установки. Онлайн-загрузка будет включена после публикации отдельного игрового EXE в GitHub Releases.",
+      "status": "Вышла",
+      "release_date": "2026-11-06",
+      "availability": "local",
+      "sha256": "e2400318a30c8ae0e92fb2b0e158a52cd9a743e6cdff12b22693376f2c63204d"
     }
   ],
   "upcoming": []
